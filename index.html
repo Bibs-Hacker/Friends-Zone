@@ -1,0 +1,215 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MER-HUB</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      overflow-x: hidden;
+    }
+    .splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 9999;
+    }
+    .splash h1 {
+      font-size: 6.5rem;
+      font-weight: bold;
+      color: red;
+      animation: fadeIn 10s ease forwards;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0; transform: scale(0.8);}
+      to {opacity: 1; transform: scale(1);}
+    }
+    header {
+      position: sticky;
+      top: 0;
+      background: rgba(0,0,0,0.9);
+      padding: 10px;
+      z-index: 100;
+    }
+    header img {
+      width: 80px;
+      border-radius: 40%;
+      animation: spin 10s linear infinite;
+    }
+    @keyframes spin {
+      from {transform: rotate(0deg);}
+      to {transform: rotate(360deg);}
+    }
+    .category {
+      padding: 20px;
+    }
+    .category h2 {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+    .row {
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      padding-bottom: 10px;
+    }
+    .movie-card {
+      min-width: 150px;
+      height: 225px;
+      background: #222;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .movie-card:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px pink;
+    }
+    .movie-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      display: none;
+    }
+    .modal iframe {
+      width: 80%;
+      height: 60%;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #111;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="splash">
+    <h1>OSALA MOVIES-HUB</h1>
+    <h2><p class="tagline">Watch the trailes of your favorite movies. Have fun and thank me later...</p></h2>
+  </div>  <header>
+    <img src="https://files.catbox.moe/03e3lg.jpg" alt="Profile Pic">
+  </header>  <main id="content"></main>  <div class="modal" id="trailerModal">
+    <iframe id="trailerFrame" src="" frameborder="0" allowfullscreen></iframe>
+  </div>
+  <h2>
+  <footer>
+    © MER-HUB by Tech Brian & Merab 2025
+  </footer>
+  </h2>
+  <script>
+    const API_KEY = "4f2372847d0483ed10dac1fcad73ef66";
+    const IMG_PATH = "https://image.tmdb.org/t/p/w500";
+    const content = document.getElementById("content");
+    const modal = document.getElementById("trailerModal");
+    const trailerFrame = document.getElementById("trailerFrame");
+
+    const categories = [
+      { name: "Action", url: `with_genres=28` },
+      { name: "Adventure", url: `with_genres=12` },
+      { name: "Comedy", url: `with_genres=35` },
+      { name: "Drama", url: `with_genres=18` },
+      { name: "Horror", url: `with_genres=27` },
+      { name: "Romance", url: `with_genres=10749` },
+      { name: "Sci-Fi", url: `with_genres=878` },
+      { name: "Thriller", url: `with_genres=53` },
+      { name: "Mystery", url: `with_genres=9648` },
+      { name: "Fantasy", url: `with_genres=14` },
+      { name: "Crime", url: `with_genres=80` },
+      { name: "War", url: `with_genres=10752` },
+      { name: "Western", url: `with_genres=37` },
+      { name: "Animation", url: `with_genres=16` },
+      { name: "Family", url: `with_genres=10751` },
+      { name: "Musical", url: `with_keywords=musical` },
+      { name: "Documentary", url: `with_genres=99` },
+      { name: "Superhero", url: `with_keywords=9715` },
+      { name: "Hollywood", url: `with_original_language=en` },
+      { name: "Nollywood", url: `with_original_language=ig` },
+      { name: "Bollywood", url: `with_original_language=hi` },
+      { name: "K-Drama", url: `with_original_language=ko` },
+      { name: "African Movies", url: `region=NG` },
+      { name: "Spanish Movies", url: `with_original_language=es` },
+      { name: "Chinese Movies", url: `with_original_language=zh` },
+      { name: "French Cinema", url: `with_original_language=fr` },
+      { name: "Series / TV Shows", url: `type=tv` },
+      { name: "Classic Films", url: `primary_release_date.lte=1980-01-01` },
+    ];
+
+    function createCategory(category) {
+      const section = document.createElement("section");
+      section.classList.add("category");
+      section.innerHTML = `<h2>${category.name}</h2><div class="row" id="row-${category.name}"></div>`;
+      content.appendChild(section);
+      loadMovies(category, 1);
+      section.querySelector(".row").addEventListener("scroll", (e) => {
+        if (e.target.scrollLeft + e.target.clientWidth >= e.target.scrollWidth - 5) {
+          let page = parseInt(e.target.dataset.page || "1") + 1;
+          e.target.dataset.page = page;
+          loadMovies(category, page, e.target);
+        }
+      });
+    }
+
+    async function loadMovies(category, page = 1, rowElement) {
+      let baseUrl = category.url.includes("type=tv") ? "/discover/tv" : "/discover/movie";
+      const url = `https://api.themoviedb.org/3${baseUrl}?api_key=${API_KEY}&${category.url}&page=${page}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const row = rowElement || document.getElementById(`row-${category.name}`);
+      data.results.forEach(movie => {
+        if (!movie.poster_path) return;
+        const card = document.createElement("div");
+        card.classList.add("movie-card");
+        card.innerHTML = `<img src="${IMG_PATH + movie.poster_path}" alt="${movie.title || movie.name}">`;
+        card.addEventListener("click", () => showTrailer(movie.id, baseUrl.includes("tv")));
+        row.appendChild(card);
+      });
+    }
+
+    async function showTrailer(movieId, isTV=false) {
+      const url = `https://api.themoviedb.org/3/${isTV ? "tv" : "movie"}/${movieId}/videos?api_key=${API_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const trailer = data.results.find(v => v.type === "Trailer");
+      if (trailer) {
+        trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1`;
+        modal.style.display = "flex";
+      }
+    }
+
+    modal.addEventListener("click", () => {
+      modal.style.display = "none";
+      trailerFrame.src = "";
+    });
+
+    // Splash screen timeout
+    setTimeout(() => {
+      document.querySelector(".splash").style.display = "none";
+    }, 3000);
+
+    // Build all categories
+    categories.forEach(createCategory);
+  </script></body>
+</html>
